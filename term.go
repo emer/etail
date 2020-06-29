@@ -7,30 +7,44 @@ package main
 import (
 	"fmt"
 	"image"
+	"sync"
 
 	"github.com/goki/ki/ints"
-	"github.com/nsf/termbox-go"
+	termbox "github.com/nsf/termbox-go"
 )
 
+// MinLines is minimum number of lines -- fewer files are shown
+// if each would get less than this
 var MinLines = 5
 
+// Term represents the terminal display -- has all drawing routines
+// and all display data.  See Tail for two diff display modes.
 type Term struct {
-	Size      image.Point
-	FixCols   int  `desc:"number of fixed (non-scrolling) columns on left"`
-	ColSt     int  `desc:"starting column index -- relative to FixCols"`
-	RowSt     int  `desc:"starting row index"`
-	FileSt    int  `desc:"starting index into files (if too many to display)"`
-	NFiles    int  `desc:"number of files to display (if too many to display)"`
-	MaxWd     int  `desc:"maximum column width (1/4 of term width)"`
-	MaxRows   int  `desc:"max number of rows across all files"`
-	ShowFName bool `desc:"if true, print filename"`
-	YPer      int  `desc:"number of Y rows per file total: Size.Y / len(TheFiles)"`
-	RowsPer   int  `desc:"rows of data per file (subtracting header, filename)"`
+	Size      image.Point `desc:"size of terminal"`
+	FixCols   int         `desc:"number of fixed (non-scrolling) columns on left"`
+	ColSt     int         `desc:"starting column index -- relative to FixCols"`
+	RowSt     int         `desc:"starting row index -- for !Tail mode"`
+	RowOff    int         `desc:"row offset -- for Tail mode"`
+	FileSt    int         `desc:"starting index into files (if too many to display)"`
+	NFiles    int         `desc:"number of files to display (if too many to display)"`
+	MaxWd     int         `desc:"maximum column width (1/4 of term width)"`
+	MaxRows   int         `desc:"max number of rows across all files"`
+	YPer      int         `desc:"number of Y rows per file total: Size.Y / len(TheFiles)"`
+	RowsPer   int         `desc:"rows of data per file (subtracting header, filename)"`
+	ShowFName bool        `desc:"if true, print filename"`
+	Tail      bool        `desc:"if true, display is synchronized by the last row for each file, and otherwise it is synchronized by the starting row.  Tail also checks for file updates"`
+	ColNums   bool        `desc:"display column numbers instead of names"`
+	Mu        sync.Mutex  `desc:"draw mutex"`
 }
 
+// TheTerm is the terminal instance
 var TheTerm Term
 
+// Draw draws the current terminal display
 func (tm *Term) Draw() error {
+	tm.Mu.Lock()
+	defer tm.Mu.Unlock()
+
 	err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	if err != nil {
 		return err
@@ -44,12 +58,12 @@ func (tm *Term) Draw() error {
 	if nf == 0 {
 		return fmt.Errorf("No files")
 	}
-
-	tm.YPer = tm.Size.Y / nf
+	ysz := tm.Size.Y - 1 // status line
+	tm.YPer = ysz / nf
 	tm.NFiles = nf
 
 	if tm.YPer < MinLines {
-		tm.NFiles = tm.Size.Y / MinLines
+		tm.NFiles = ysz / MinLines
 		tm.YPer = MinLines
 	}
 	if tm.NFiles+tm.FileSt > nf {
@@ -73,58 +87,137 @@ func (tm *Term) Draw() error {
 		mxrows = ints.MaxInt(mxrows, fl.Rows)
 	}
 	tm.MaxRows = mxrows
+
+	tm.StatusLine()
+
 	termbox.Flush()
 	return nil
 }
 
+// StatusLine renders the status line at bottom
+func (tm *Term) StatusLine() {
+	pos := tm.RowSt
+	if tm.Tail {
+		pos = tm.RowOff
+	}
+	stat := fmt.Sprintf("Tail: %v\tPos: %d\tMaxRows: %d\tFileSt: %d          ", tm.Tail, pos, tm.MaxRows, tm.FileSt)
+	tm.DrawString(0, tm.Size.Y-1, stat, len(stat), termbox.AttrReverse, termbox.AttrReverse)
+}
+
+// NextPage moves down a page
 func (tm *Term) NextPage() error {
-	tm.RowSt = ints.MinInt(tm.RowSt+tm.RowsPer, tm.MaxRows-tm.RowsPer)
-	tm.RowSt = ints.MaxInt(tm.RowSt, 0)
+	if tm.Tail {
+		tm.RowOff = ints.MinInt(tm.RowOff+tm.RowsPer, 0)
+		tm.RowOff = ints.MaxInt(tm.RowOff, tm.RowsPer-tm.MaxRows)
+	} else {
+		tm.RowSt = ints.MinInt(tm.RowSt+tm.RowsPer, tm.MaxRows-tm.RowsPer)
+		tm.RowSt = ints.MaxInt(tm.RowSt, 0)
+	}
 	return tm.Draw()
 }
 
+// PrevPage moves up a page
 func (tm *Term) PrevPage() error {
-	tm.RowSt = ints.MaxInt(tm.RowSt-tm.RowsPer, 0)
-	tm.RowSt = ints.MinInt(tm.RowSt, tm.MaxRows-tm.RowsPer)
+	if tm.Tail {
+		tm.RowOff = ints.MaxInt(tm.RowOff-tm.RowsPer, tm.RowsPer-tm.MaxRows)
+		tm.RowOff = ints.MinInt(tm.RowOff, 0)
+	} else {
+		tm.RowSt = ints.MaxInt(tm.RowSt-tm.RowsPer, 0)
+		tm.RowSt = ints.MinInt(tm.RowSt, tm.MaxRows-tm.RowsPer)
+	}
 	return tm.Draw()
 }
 
+// Top moves to starting row = 0
 func (tm *Term) Top() error {
+	tm.RowOff = tm.RowsPer - tm.MaxRows
 	tm.RowSt = 0
 	return tm.Draw()
 }
 
+// End moves row start to last position in longest file
 func (tm *Term) End() error {
+	tm.RowOff = 0
 	tm.RowSt = tm.MaxRows - tm.RowsPer
 	return tm.Draw()
 }
 
+// ScrollRight scrolls columns to right
 func (tm *Term) ScrollRight() error {
 	tm.ColSt++ // no obvious max
 	return tm.Draw()
 }
 
+// ScrollLeft scrolls columns to left
 func (tm *Term) ScrollLeft() error {
 	tm.ColSt = ints.MaxInt(tm.ColSt-1, 0)
 	return tm.Draw()
 }
 
+// FixRight increases number of fixed columns
 func (tm *Term) FixRight() error {
 	tm.FixCols++ // no obvious max
 	return tm.Draw()
 }
 
+// FixLeft decreases number of fixed columns
 func (tm *Term) FixLeft() error {
 	tm.FixCols = ints.MaxInt(tm.FixCols-1, 0)
 	return tm.Draw()
 }
 
+// FilesNext moves down in list of files to display
+func (tm *Term) FilesNext() error {
+	nf := len(TheFiles)
+	tm.FileSt = ints.MinInt(tm.FileSt+1, nf-tm.NFiles)
+	tm.FileSt = ints.MaxInt(tm.FileSt, 0)
+	return tm.Draw()
+}
+
+// FilesPrev moves up in list of files to display
+func (tm *Term) FilesPrev() error {
+	nf := len(TheFiles)
+	tm.FileSt = ints.MaxInt(tm.FileSt-1, 0)
+	tm.FileSt = ints.MinInt(tm.FileSt, nf-tm.NFiles)
+	return tm.Draw()
+}
+
+// ToggleNames toggles whether file names are shown
 func (tm *Term) ToggleNames() error {
 	tm.ShowFName = !tm.ShowFName
 	return tm.Draw()
 }
 
+// ToggleTail toggles Tail mode
+func (tm *Term) ToggleTail() error {
+	tm.Tail = !tm.Tail
+	return tm.Draw()
+}
+
+// ToggleColNums toggles ColNums mode
+func (tm *Term) ToggleColNums() error {
+	tm.ColNums = !tm.ColNums
+	return tm.Draw()
+}
+
+// TailCheck does tail update check -- returns true if updated
+func (tm *Term) TailCheck() bool {
+	if !tm.Tail {
+		return false
+	}
+	tm.Mu.Lock()
+	updt := TheFiles.CheckUpdates()
+	tm.Mu.Unlock()
+	if !updt {
+		return false
+	}
+	tm.Draw()
+	return true
+}
+
+// DrawFile draws one file, starting at given y offset
 func (tm *Term) DrawFile(fl *File, sty int) {
+	tdo := ints.MaxInt(0, fl.Rows-tm.RowsPer) // tail data offset for this file
 	stx := 0
 	for ci, hs := range fl.Heads {
 		if !(ci < tm.FixCols || ci >= tm.FixCols+tm.ColSt) {
@@ -136,15 +229,23 @@ func (tm *Term) DrawFile(fl *File, sty int) {
 			my++
 		}
 		wmax := ints.MinInt(fl.Widths[ci], tm.MaxWd)
+		if tm.ColNums {
+			hs = fmt.Sprintf("%d", ci)
+		}
 		tm.DrawString(stx, my, hs, wmax, termbox.AttrReverse, termbox.AttrReverse)
 		if ci == tm.FixCols-1 {
 			tm.DrawString(stx+wmax+1, my, "|", 1, termbox.AttrReverse, termbox.AttrReverse)
 		}
 		my++
 		for ri := 0; ri < tm.RowsPer; ri++ {
-			di := tm.RowSt + ri
-			if di >= len(fl.Data) {
-				break
+			var di int
+			if tm.Tail {
+				di = tdo + tm.RowOff + ri
+			} else {
+				di = tm.RowSt + ri
+			}
+			if di >= len(fl.Data) || di < 0 {
+				continue
 			}
 			dr := fl.Data[di]
 			if ci >= len(dr) {
@@ -166,10 +267,12 @@ func (tm *Term) DrawFile(fl *File, sty int) {
 	}
 }
 
+// DrawStringDef draws string at given position, using default colors
 func (tm *Term) DrawStringDef(x, y int, s string) {
 	tm.DrawString(x, y, s, tm.Size.X, termbox.ColorDefault, termbox.ColorDefault)
 }
 
+// DrawString draws string at given position, using given attributes
 func (tm *Term) DrawString(x, y int, s string, maxlen int, fg, bg termbox.Attribute) {
 	if y >= tm.Size.Y || y < 0 {
 		return

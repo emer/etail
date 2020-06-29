@@ -7,6 +7,5 @@ This is a Go rewrite of the `pdptail` command written in perl, dating back to th
 # TODO
 
 * actual comma support
-* file list up / down
 * tail -- requires separate offset per file
 

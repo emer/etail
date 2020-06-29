@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/nsf/termbox-go"
 )
@@ -22,9 +23,14 @@ func main() {
 
 	TheFiles.Open(os.Args[1:])
 
-	if len(TheFiles) == 0 {
+	nf := len(TheFiles)
+	if nf == 0 {
 		fmt.Printf("usage: etail <filename>...  (space separated)\n")
 		return
+	}
+
+	if nf > 1 {
+		TheTerm.ShowFName = true
 	}
 
 	err = TheTerm.Draw()
@@ -32,6 +38,15 @@ func main() {
 		log.Println(err)
 		panic(err)
 	}
+
+	Tailer := time.NewTicker(time.Duration(500) * time.Millisecond)
+	go func() {
+		for {
+			<-Tailer.C
+			TheTerm.TailCheck()
+		}
+	}()
+
 loop:
 	for {
 		switch ev := termbox.PollEvent(); ev.Type {
@@ -55,8 +70,16 @@ loop:
 				TheTerm.FixRight()
 			case ev.Ch == 's' || ev.Ch == 'S':
 				TheTerm.FixLeft()
+			case ev.Ch == 'v' || ev.Ch == 'V':
+				TheTerm.FilesNext()
+			case ev.Ch == 'u' || ev.Ch == 'U':
+				TheTerm.FilesPrev()
 			case ev.Ch == 'd' || ev.Ch == 'D':
 				TheTerm.ToggleNames()
+			case ev.Ch == 't' || ev.Ch == 'T':
+				TheTerm.ToggleTail()
+			case ev.Ch == 'c' || ev.Ch == 'C':
+				TheTerm.ToggleColNums()
 			case ev.Ch == 'h' || ev.Ch == 'H':
 				TheTerm.Help()
 			}

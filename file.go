@@ -8,33 +8,58 @@ import (
 	"bufio"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/goki/ki/ints"
 )
 
+// File represents one opened file -- all data is read in and maintained here
 type File struct {
-	FName  string
-	Rows   int `desc:"rows of data == len(Data)"`
-	Widths []int
-	Heads  []string
-	Data   [][]string
+	FName   string     `desc:"file name (either in same dir or include path)"`
+	ModTime time.Time  `desc:"mod time of file when last read"`
+	Rows    int        `desc:"rows of data == len(Data)"`
+	Widths  []int      `desc:"width of each column: resized to fit widest element"`
+	Heads   []string   `desc:"headers"`
+	Data    [][]string `desc:"data -- rows 1..end"`
 }
 
+// Files is a slice of open files
 type Files []*File
 
+// TheFiles are the set of open files
 var TheFiles Files
 
+// Open opens file, reads it
 func (fl *File) Open(fname string) error {
 	fl.FName = fname
 	return fl.Read()
 }
 
+// CheckUpdate checks if file has been modified -- returns true if so
+func (fl *File) CheckUpdate() bool {
+	st, err := os.Stat(fl.FName)
+	if err != nil {
+		return false
+	}
+	return st.ModTime().After(fl.ModTime)
+}
+
+// Read reads data from file
 func (fl *File) Read() error {
+	st, err := os.Stat(fl.FName)
+	if err != nil {
+		return err
+	}
+	fl.ModTime = st.ModTime()
 	f, err := os.Open(fl.FName)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
+	if fl.Data != nil {
+		fl.Data = fl.Data[:0]
+	}
 
 	scan := bufio.NewScanner(f)
 	ln := 0
@@ -56,6 +81,7 @@ func (fl *File) Read() error {
 	return err
 }
 
+// FitWidths expands widths given current set of fields
 func (fl *File) FitWidths(fd []string) {
 	nw := len(fl.Widths)
 	for i, f := range fd {
@@ -70,6 +96,7 @@ func (fl *File) FitWidths(fd []string) {
 /////////////////////////////////////////////////////////////////
 // Files
 
+// Open opens all files
 func (fl *Files) Open(fnms []string) {
 	for _, fn := range fnms {
 		f := &File{}
@@ -78,4 +105,16 @@ func (fl *Files) Open(fnms []string) {
 			*fl = append(*fl, f)
 		}
 	}
+}
+
+// CheckUpdates check for any updated files, re-read if so -- returns true if so
+func (fl *Files) CheckUpdates() bool {
+	got := false
+	for _, f := range *fl {
+		if f.CheckUpdate() {
+			f.Read()
+			got = true
+		}
+	}
+	return got
 }
