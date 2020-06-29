@@ -13,10 +13,6 @@ import (
 	termbox "github.com/nsf/termbox-go"
 )
 
-// MinLines is minimum number of lines -- fewer files are shown
-// if each would get less than this
-var MinLines = 5
-
 // Term represents the terminal display -- has all drawing routines
 // and all display data.  See Tail for two diff display modes.
 type Term struct {
@@ -27,6 +23,7 @@ type Term struct {
 	RowOff    int         `desc:"row offset -- for Tail mode"`
 	FileSt    int         `desc:"starting index into files (if too many to display)"`
 	NFiles    int         `desc:"number of files to display (if too many to display)"`
+	MinLines  int         `desc:"minimum number of lines per file"`
 	MaxWd     int         `desc:"maximum column width (1/4 of term width)"`
 	MaxRows   int         `desc:"max number of rows across all files"`
 	YPer      int         `desc:"number of Y rows per file total: Size.Y / len(TheFiles)"`
@@ -49,10 +46,15 @@ func (tm *Term) Draw() error {
 	if err != nil {
 		return err
 	}
+
 	w, h := termbox.Size()
 	tm.Size.X = w
 	tm.Size.Y = h
 	tm.MaxWd = tm.Size.X / 4
+
+	if tm.MinLines == 0 {
+		tm.MinLines = ints.MinInt(5, tm.Size.Y-1)
+	}
 
 	nf := len(TheFiles)
 	if nf == 0 {
@@ -62,9 +64,9 @@ func (tm *Term) Draw() error {
 	tm.YPer = ysz / nf
 	tm.NFiles = nf
 
-	if tm.YPer < MinLines {
-		tm.NFiles = ysz / MinLines
-		tm.YPer = MinLines
+	if tm.YPer < tm.MinLines {
+		tm.NFiles = ysz / tm.MinLines
+		tm.YPer = tm.MinLines
 	}
 	if tm.NFiles+tm.FileSt > nf {
 		tm.FileSt = ints.MaxInt(0, nf-tm.NFiles)
@@ -100,7 +102,7 @@ func (tm *Term) StatusLine() {
 	if tm.Tail {
 		pos = tm.RowOff
 	}
-	stat := fmt.Sprintf("Tail: %v\tPos: %d\tMaxRows: %d\tFileSt: %d          ", tm.Tail, pos, tm.MaxRows, tm.FileSt)
+	stat := fmt.Sprintf("Tail: %v\tPos: %d\tMaxRows: %d\tNFile: %d\tFileSt: %d\t h = help [spc,n,p,r,f,l,b,w,s,t,a,e,v,u,m,l,c,q]      ", tm.Tail, pos, tm.MaxRows, len(TheFiles), tm.FileSt)
 	tm.DrawString(0, tm.Size.Y-1, stat, len(stat), termbox.AttrReverse, termbox.AttrReverse)
 }
 
@@ -179,6 +181,19 @@ func (tm *Term) FilesPrev() error {
 	nf := len(TheFiles)
 	tm.FileSt = ints.MaxInt(tm.FileSt-1, 0)
 	tm.FileSt = ints.MinInt(tm.FileSt, nf-tm.NFiles)
+	return tm.Draw()
+}
+
+// MoreMinLines increases minimum number of lines per file
+func (tm *Term) MoreMinLines() error {
+	tm.MinLines++
+	return tm.Draw()
+}
+
+// LessMinLines decreases minimum number of lines per file
+func (tm *Term) LessMinLines() error {
+	tm.MinLines--
+	tm.MinLines = ints.MaxInt(3, tm.MinLines)
 	return tm.Draw()
 }
 

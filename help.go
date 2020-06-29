@@ -17,9 +17,9 @@ func (tm *Term) Help() {
 	ln++
 	tm.DrawStringDef(0, ln, "p       page up")
 	ln++
-	tm.DrawStringDef(0, ln, "r,f     scroll right-hand panel to the right")
+	tm.DrawStringDef(0, ln, "f       scroll right-hand panel to the right")
 	ln++
-	tm.DrawStringDef(0, ln, "l,b     scroll right-hand panel to the left")
+	tm.DrawStringDef(0, ln, "b       scroll right-hand panel to the left")
 	ln++
 	tm.DrawStringDef(0, ln, "w       widen the left-hand panel of columns")
 	ln++
@@ -34,6 +34,10 @@ func (tm *Term) Help() {
 	tm.DrawStringDef(0, ln, "v       rotate down through the list of files (if not all displayed)")
 	ln++
 	tm.DrawStringDef(0, ln, "u       rotate up through the list of files (if not all displayed)")
+	ln++
+	tm.DrawStringDef(0, ln, "m       more minimum lines per file -- increase amount shown of each file")
+	ln++
+	tm.DrawStringDef(0, ln, "l       less minimum lines per file -- decrease amount shown of each file")
 	ln++
 	tm.DrawStringDef(0, ln, "d       toggle display of file names")
 	ln++

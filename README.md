@@ -25,12 +25,14 @@ $ etail RA25*
 
 # Keys
 
+This is shown when you press `h` in the app:
+
 | Key(s)  | Function      |
 | ------- | ------------------------------------------------------ |
 | spc,n   | page down                                                     |
 | p       | page up                                                       |
-| r,f     | scroll right-hand panel to the right                          |
-| l,b     | scroll right-hand panel to the left                           |
+| f       | scroll right-hand panel to the right                          |
+| b       | scroll right-hand panel to the left                           |
 | w       | widen the left-hand panel of columns                          |
 | s       | shrink the left-hand panel of columns                         |
 | t       | toggle tail-mode (auto updating as file grows) on/off         |
@@ -38,6 +40,8 @@ $ etail RA25*
 | e       | jump to end                                                   |
 | v       | rotate down through the list of files (if not all displayed)  |
 | u       | rotate up through the list of files (if not all displayed)    |
+| m       | more minimum lines per file -- increase amount shown of each file |
+| l       | less minimum lines per file -- decrease amount shown of each file |
 | d       | toggle display of file names                                  |
 | c       | toggle display of column numbers instead of names             |
 | q       | quit                                                          |
