@@ -33,13 +33,11 @@ func main() {
 		TheTerm.ShowFName = true
 	}
 
-	err = TheTerm.Draw()
+	err = TheTerm.ToggleTail() // start in tail mode
 	if err != nil {
 		log.Println(err)
 		panic(err)
 	}
-
-	TheTerm.ToggleTail() // start in tail mode
 
 	Tailer := time.NewTicker(time.Duration(500) * time.Millisecond)
 	go func() {
