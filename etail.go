@@ -39,6 +39,8 @@ func main() {
 		panic(err)
 	}
 
+	TheTerm.ToggleTail() // start in tail mode
+
 	Tailer := time.NewTicker(time.Duration(500) * time.Millisecond)
 	go func() {
 		for {
