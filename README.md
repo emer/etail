@@ -9,7 +9,7 @@ This is a Go rewrite of the `pdptail` command written in perl, dating back to th
 
 # Install
 
-This should install into your $GOPATH/bin dir:
+This should install into your `$GOPATH/bin` dir:
 
 ```bash
 $ go get github.com/emer/etail
@@ -26,6 +26,7 @@ $ etail RA25*
 # Keys
 
 This is shown when you press `h` in the app:
+
 
 | Key(s)  | Function      |
 | ------- | ------------------------------------------------------ |
@@ -45,4 +46,5 @@ This is shown when you press `h` in the app:
 | d       | toggle display of file names                                  |
 | c       | toggle display of column numbers instead of names             |
 | q       | quit                                                          |
+
 
