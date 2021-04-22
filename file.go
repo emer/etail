@@ -17,7 +17,7 @@ import (
 type File struct {
 	FName   string     `desc:"file name (either in same dir or include path)"`
 	ModTime time.Time  `desc:"mod time of file when last read"`
-	Commas  bool       `desc:"delim is commas, not whitespace"`
+	Commas  bool       `desc:"delim is commas, not tabs"`
 	Rows    int        `desc:"rows of data == len(Data)"`
 	Widths  []int      `desc:"width of each column: resized to fit widest element"`
 	Heads   []string   `desc:"headers"`
@@ -70,7 +70,7 @@ func (fl *File) Read() error {
 		if fl.Commas {
 			fd = strings.Split(s, ",")
 		} else {
-			fd = strings.Fields(s)
+			fd = strings.Split(s, "\t")
 		}
 		if ln == 0 {
 			if len(fd) == 0 || strings.Count(s, ",") > strings.Count(s, "\t") {
