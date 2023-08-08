@@ -15,13 +15,27 @@ import (
 
 // File represents one opened file -- all data is read in and maintained here
 type File struct {
-	FName   string     `desc:"file name (either in same dir or include path)"`
-	ModTime time.Time  `desc:"mod time of file when last read"`
-	Commas  bool       `desc:"delim is commas, not tabs"`
-	Rows    int        `desc:"rows of data == len(Data)"`
-	Widths  []int      `desc:"width of each column: resized to fit widest element"`
-	Heads   []string   `desc:"headers"`
-	Data    [][]string `desc:"data -- rows 1..end"`
+
+	// file name (either in same dir or include path)
+	FName string `desc:"file name (either in same dir or include path)"`
+
+	// mod time of file when last read
+	ModTime time.Time `desc:"mod time of file when last read"`
+
+	// delim is commas, not tabs
+	Commas bool `desc:"delim is commas, not tabs"`
+
+	// rows of data == len(Data)
+	Rows int `desc:"rows of data == len(Data)"`
+
+	// width of each column: resized to fit widest element
+	Widths []int `desc:"width of each column: resized to fit widest element"`
+
+	// headers
+	Heads []string `desc:"headers"`
+
+	// data -- rows 1..end
+	Data [][]string `desc:"data -- rows 1..end"`
 }
 
 // Files is a slice of open files

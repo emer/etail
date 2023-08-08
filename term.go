@@ -16,22 +16,54 @@ import (
 // Term represents the terminal display -- has all drawing routines
 // and all display data.  See Tail for two diff display modes.
 type Term struct {
-	Size      image.Point `desc:"size of terminal"`
-	FixCols   int         `desc:"number of fixed (non-scrolling) columns on left"`
-	ColSt     int         `desc:"starting column index -- relative to FixCols"`
-	RowSt     int         `desc:"starting row index -- for !Tail mode"`
-	RowOff    int         `desc:"row offset -- for Tail mode"`
-	FileSt    int         `desc:"starting index into files (if too many to display)"`
-	NFiles    int         `desc:"number of files to display (if too many to display)"`
-	MinLines  int         `desc:"minimum number of lines per file"`
-	MaxWd     int         `desc:"maximum column width (1/4 of term width)"`
-	MaxRows   int         `desc:"max number of rows across all files"`
-	YPer      int         `desc:"number of Y rows per file total: Size.Y / len(TheFiles)"`
-	RowsPer   int         `desc:"rows of data per file (subtracting header, filename)"`
-	ShowFName bool        `desc:"if true, print filename"`
-	Tail      bool        `desc:"if true, display is synchronized by the last row for each file, and otherwise it is synchronized by the starting row.  Tail also checks for file updates"`
-	ColNums   bool        `desc:"display column numbers instead of names"`
-	Mu        sync.Mutex  `desc:"draw mutex"`
+
+	// size of terminal
+	Size image.Point `desc:"size of terminal"`
+
+	// number of fixed (non-scrolling) columns on left
+	FixCols int `desc:"number of fixed (non-scrolling) columns on left"`
+
+	// starting column index -- relative to FixCols
+	ColSt int `desc:"starting column index -- relative to FixCols"`
+
+	// starting row index -- for !Tail mode
+	RowSt int `desc:"starting row index -- for !Tail mode"`
+
+	// row offset -- for Tail mode
+	RowOff int `desc:"row offset -- for Tail mode"`
+
+	// starting index into files (if too many to display)
+	FileSt int `desc:"starting index into files (if too many to display)"`
+
+	// number of files to display (if too many to display)
+	NFiles int `desc:"number of files to display (if too many to display)"`
+
+	// minimum number of lines per file
+	MinLines int `desc:"minimum number of lines per file"`
+
+	// maximum column width (1/4 of term width)
+	MaxWd int `desc:"maximum column width (1/4 of term width)"`
+
+	// max number of rows across all files
+	MaxRows int `desc:"max number of rows across all files"`
+
+	// number of Y rows per file total: Size.Y / len(TheFiles)
+	YPer int `desc:"number of Y rows per file total: Size.Y / len(TheFiles)"`
+
+	// rows of data per file (subtracting header, filename)
+	RowsPer int `desc:"rows of data per file (subtracting header, filename)"`
+
+	// if true, print filename
+	ShowFName bool `desc:"if true, print filename"`
+
+	// if true, display is synchronized by the last row for each file, and otherwise it is synchronized by the starting row.  Tail also checks for file updates
+	Tail bool `desc:"if true, display is synchronized by the last row for each file, and otherwise it is synchronized by the starting row.  Tail also checks for file updates"`
+
+	// display column numbers instead of names
+	ColNums bool `desc:"display column numbers instead of names"`
+
+	// draw mutex
+	Mu sync.Mutex `desc:"draw mutex"`
 }
 
 // TheTerm is the terminal instance
