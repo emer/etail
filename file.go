@@ -9,8 +9,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/goki/ki/ints"
 )
 
 // File represents one opened file -- all data is read in and maintained here
@@ -112,7 +110,7 @@ func (fl *File) FitWidths(fd []string) {
 		if i >= nw {
 			break
 		}
-		w := ints.MaxInt(fl.Widths[i], len(f))
+		w := max(fl.Widths[i], len(f))
 		fl.Widths[i] = w
 	}
 }

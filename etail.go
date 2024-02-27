@@ -54,10 +54,14 @@ loop:
 			switch {
 			case ev.Key == termbox.KeyEsc || ev.Ch == 'Q' || ev.Ch == 'q':
 				break loop
-			case ev.Ch == ' ' || ev.Ch == 'n' || ev.Ch == 'N' || ev.Key == termbox.KeyArrowDown || ev.Key == termbox.KeyPgdn || ev.Key == termbox.KeySpace:
+			case ev.Ch == ' ' || ev.Ch == 'n' || ev.Ch == 'N' || ev.Key == termbox.KeyPgdn || ev.Key == termbox.KeySpace:
 				TheTerm.NextPage()
-			case ev.Ch == 'p' || ev.Ch == 'P' || ev.Key == termbox.KeyArrowUp || ev.Key == termbox.KeyPgup:
+			case ev.Ch == 'p' || ev.Ch == 'P' || ev.Key == termbox.KeyPgup:
 				TheTerm.PrevPage()
+			case ev.Key == termbox.KeyArrowDown:
+				TheTerm.NextLine()
+			case ev.Key == termbox.KeyArrowUp:
+				TheTerm.PrevLine()
 			case ev.Ch == 'f' || ev.Ch == 'F' || ev.Key == termbox.KeyArrowRight:
 				TheTerm.ScrollRight()
 			case ev.Ch == 'b' || ev.Ch == 'B' || ev.Key == termbox.KeyArrowLeft:

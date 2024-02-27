@@ -9,7 +9,6 @@ import (
 	"image"
 	"sync"
 
-	"github.com/goki/ki/ints"
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -29,8 +28,8 @@ type Term struct {
 	// starting row index -- for !Tail mode
 	RowSt int `desc:"starting row index -- for !Tail mode"`
 
-	// row offset -- for Tail mode
-	RowOff int `desc:"row offset -- for Tail mode"`
+	// row from end -- for Tail mode
+	RowFmEnd int `desc:"row from end (relative to RowsPer) -- for Tail mode"`
 
 	// starting index into files (if too many to display)
 	FileSt int `desc:"starting index into files (if too many to display)"`
@@ -85,7 +84,7 @@ func (tm *Term) Draw() error {
 	tm.MaxWd = tm.Size.X / 4
 
 	if tm.MinLines == 0 {
-		tm.MinLines = ints.MinInt(5, tm.Size.Y-1)
+		tm.MinLines = min(5, tm.Size.Y-1)
 	}
 
 	nf := len(TheFiles)
@@ -101,7 +100,7 @@ func (tm *Term) Draw() error {
 		tm.YPer = tm.MinLines
 	}
 	if tm.NFiles+tm.FileSt > nf {
-		tm.FileSt = ints.MaxInt(0, nf-tm.NFiles)
+		tm.FileSt = max(0, nf-tm.NFiles)
 	}
 
 	tm.RowsPer = tm.YPer - 1
@@ -118,7 +117,7 @@ func (tm *Term) Draw() error {
 		fl := TheFiles[ffi]
 		tm.DrawFile(fl, sty)
 		sty += tm.YPer
-		mxrows = ints.MaxInt(mxrows, fl.Rows)
+		mxrows = max(mxrows, fl.Rows)
 	}
 	tm.MaxRows = mxrows
 
@@ -132,7 +131,7 @@ func (tm *Term) Draw() error {
 func (tm *Term) StatusLine() {
 	pos := tm.RowSt
 	if tm.Tail {
-		pos = tm.RowOff
+		pos = tm.RowFmEnd
 	}
 	stat := fmt.Sprintf("Tail: %v\tPos: %d\tMaxRows: %d\tNFile: %d\tFileSt: %d\t h = help [spc,n,p,r,f,l,b,w,s,t,a,e,v,u,m,l,c,q]      ", tm.Tail, pos, tm.MaxRows, len(TheFiles), tm.FileSt)
 	tm.DrawString(0, tm.Size.Y-1, stat, len(stat), termbox.AttrReverse, termbox.AttrReverse)
@@ -141,11 +140,12 @@ func (tm *Term) StatusLine() {
 // NextPage moves down a page
 func (tm *Term) NextPage() error {
 	if tm.Tail {
-		tm.RowOff = ints.MinInt(tm.RowOff+tm.RowsPer, 0)
-		tm.RowOff = ints.MaxInt(tm.RowOff, tm.RowsPer-tm.MaxRows)
+		mn := min(-(tm.MaxRows - tm.RowsPer), 0)
+		tm.RowFmEnd = min(tm.RowFmEnd+tm.RowsPer, 0)
+		tm.RowFmEnd = max(tm.RowFmEnd, mn)
 	} else {
-		tm.RowSt = ints.MinInt(tm.RowSt+tm.RowsPer, tm.MaxRows-tm.RowsPer)
-		tm.RowSt = ints.MaxInt(tm.RowSt, 0)
+		tm.RowSt = min(tm.RowSt+tm.RowsPer, tm.MaxRows-tm.RowsPer)
+		tm.RowSt = max(tm.RowSt, 0)
 	}
 	return tm.Draw()
 }
@@ -153,26 +153,55 @@ func (tm *Term) NextPage() error {
 // PrevPage moves up a page
 func (tm *Term) PrevPage() error {
 	if tm.Tail {
-		tm.RowOff = ints.MaxInt(tm.RowOff-tm.RowsPer, tm.RowsPer-tm.MaxRows)
-		tm.RowOff = ints.MinInt(tm.RowOff, 0)
+		mn := min(-(tm.MaxRows - tm.RowsPer), 0)
+		tm.RowFmEnd = min(tm.RowFmEnd-tm.RowsPer, 0)
+		tm.RowFmEnd = max(tm.RowFmEnd, mn)
 	} else {
-		tm.RowSt = ints.MaxInt(tm.RowSt-tm.RowsPer, 0)
-		tm.RowSt = ints.MinInt(tm.RowSt, tm.MaxRows-tm.RowsPer)
+		tm.RowSt = max(tm.RowSt-tm.RowsPer, 0)
+		tm.RowSt = min(tm.RowSt, tm.MaxRows-tm.RowsPer)
+	}
+	return tm.Draw()
+}
+
+// NextLine moves down a page
+func (tm *Term) NextLine() error {
+	if tm.Tail {
+		mn := min(-(tm.MaxRows - tm.RowsPer), 0)
+		tm.RowFmEnd = min(tm.RowFmEnd+1, 0)
+		tm.RowFmEnd = max(tm.RowFmEnd, mn)
+	} else {
+		tm.RowSt = min(tm.RowSt+1, tm.MaxRows-tm.RowsPer)
+		tm.RowSt = max(tm.RowSt, 0)
+	}
+	return tm.Draw()
+}
+
+// PrevLine moves up a page
+func (tm *Term) PrevLine() error {
+	if tm.Tail {
+		mn := min(-(tm.MaxRows - tm.RowsPer), 0)
+		tm.RowFmEnd = min(tm.RowFmEnd-1, 0)
+		tm.RowFmEnd = max(tm.RowFmEnd, mn)
+	} else {
+		tm.RowSt = max(tm.RowSt-1, 0)
+		tm.RowSt = min(tm.RowSt, tm.MaxRows-tm.RowsPer)
 	}
 	return tm.Draw()
 }
 
 // Top moves to starting row = 0
 func (tm *Term) Top() error {
-	tm.RowOff = tm.RowsPer - tm.MaxRows
+	mn := min(-(tm.MaxRows - tm.RowsPer), 0)
+	tm.RowFmEnd = mn
 	tm.RowSt = 0
 	return tm.Draw()
 }
 
 // End moves row start to last position in longest file
 func (tm *Term) End() error {
-	tm.RowOff = 0
-	tm.RowSt = tm.MaxRows - tm.RowsPer
+	mx := max(tm.MaxRows-tm.RowsPer, 0)
+	tm.RowFmEnd = 0
+	tm.RowSt = mx
 	return tm.Draw()
 }
 
@@ -184,7 +213,7 @@ func (tm *Term) ScrollRight() error {
 
 // ScrollLeft scrolls columns to left
 func (tm *Term) ScrollLeft() error {
-	tm.ColSt = ints.MaxInt(tm.ColSt-1, 0)
+	tm.ColSt = max(tm.ColSt-1, 0)
 	return tm.Draw()
 }
 
@@ -196,23 +225,23 @@ func (tm *Term) FixRight() error {
 
 // FixLeft decreases number of fixed columns
 func (tm *Term) FixLeft() error {
-	tm.FixCols = ints.MaxInt(tm.FixCols-1, 0)
+	tm.FixCols = max(tm.FixCols-1, 0)
 	return tm.Draw()
 }
 
 // FilesNext moves down in list of files to display
 func (tm *Term) FilesNext() error {
 	nf := len(TheFiles)
-	tm.FileSt = ints.MinInt(tm.FileSt+1, nf-tm.NFiles)
-	tm.FileSt = ints.MaxInt(tm.FileSt, 0)
+	tm.FileSt = min(tm.FileSt+1, nf-tm.NFiles)
+	tm.FileSt = max(tm.FileSt, 0)
 	return tm.Draw()
 }
 
 // FilesPrev moves up in list of files to display
 func (tm *Term) FilesPrev() error {
 	nf := len(TheFiles)
-	tm.FileSt = ints.MaxInt(tm.FileSt-1, 0)
-	tm.FileSt = ints.MinInt(tm.FileSt, nf-tm.NFiles)
+	tm.FileSt = max(tm.FileSt-1, 0)
+	tm.FileSt = min(tm.FileSt, nf-tm.NFiles)
 	return tm.Draw()
 }
 
@@ -225,7 +254,7 @@ func (tm *Term) MoreMinLines() error {
 // LessMinLines decreases minimum number of lines per file
 func (tm *Term) LessMinLines() error {
 	tm.MinLines--
-	tm.MinLines = ints.MaxInt(3, tm.MinLines)
+	tm.MinLines = max(3, tm.MinLines)
 	return tm.Draw()
 }
 
@@ -264,7 +293,10 @@ func (tm *Term) TailCheck() bool {
 
 // DrawFile draws one file, starting at given y offset
 func (tm *Term) DrawFile(fl *File, sty int) {
-	tdo := ints.MaxInt(0, fl.Rows-tm.RowsPer) // tail data offset for this file
+	tdo := (fl.Rows - tm.RowsPer) + tm.RowFmEnd // tail data offset for this file
+	tdo = max(0, tdo)
+	rst := min(tm.RowSt, fl.Rows-tm.RowsPer)
+	rst = max(0, rst)
 	stx := 0
 	for ci, hs := range fl.Heads {
 		if !(ci < tm.FixCols || ci >= tm.FixCols+tm.ColSt) {
@@ -275,7 +307,7 @@ func (tm *Term) DrawFile(fl *File, sty int) {
 			tm.DrawString(0, my, fl.FName, tm.Size.X, termbox.AttrReverse, termbox.AttrReverse)
 			my++
 		}
-		wmax := ints.MinInt(fl.Widths[ci], tm.MaxWd)
+		wmax := min(fl.Widths[ci], tm.MaxWd)
 		if tm.ColNums {
 			hs = fmt.Sprintf("%d", ci)
 		}
@@ -287,9 +319,9 @@ func (tm *Term) DrawFile(fl *File, sty int) {
 		for ri := 0; ri < tm.RowsPer; ri++ {
 			var di int
 			if tm.Tail {
-				di = tdo + tm.RowOff + ri
+				di = tdo + ri
 			} else {
-				di = tm.RowSt + ri
+				di = rst + ri
 			}
 			if di >= len(fl.Data) || di < 0 {
 				continue
