@@ -29,7 +29,7 @@ type Term struct {
 	RowSt int `desc:"starting row index -- for !Tail mode"`
 
 	// row from end -- for Tail mode
-	RowFmEnd int `desc:"row from end (relative to RowsPer) -- for Tail mode"`
+	RowFromEnd int `desc:"row from end (relative to RowsPer) -- for Tail mode"`
 
 	// starting index into files (if too many to display)
 	FileSt int `desc:"starting index into files (if too many to display)"`
@@ -131,7 +131,7 @@ func (tm *Term) Draw() error {
 func (tm *Term) StatusLine() {
 	pos := tm.RowSt
 	if tm.Tail {
-		pos = tm.RowFmEnd
+		pos = tm.RowFromEnd
 	}
 	stat := fmt.Sprintf("Tail: %v\tPos: %d\tMaxRows: %d\tNFile: %d\tFileSt: %d\t h = help [spc,n,p,r,f,l,b,w,s,t,a,e,v,u,m,l,c,q]      ", tm.Tail, pos, tm.MaxRows, len(TheFiles), tm.FileSt)
 	tm.DrawString(0, tm.Size.Y-1, stat, len(stat), termbox.AttrReverse, termbox.AttrReverse)
@@ -141,8 +141,8 @@ func (tm *Term) StatusLine() {
 func (tm *Term) NextPage() error {
 	if tm.Tail {
 		mn := min(-(tm.MaxRows - tm.RowsPer), 0)
-		tm.RowFmEnd = min(tm.RowFmEnd+tm.RowsPer, 0)
-		tm.RowFmEnd = max(tm.RowFmEnd, mn)
+		tm.RowFromEnd = min(tm.RowFromEnd+tm.RowsPer, 0)
+		tm.RowFromEnd = max(tm.RowFromEnd, mn)
 	} else {
 		tm.RowSt = min(tm.RowSt+tm.RowsPer, tm.MaxRows-tm.RowsPer)
 		tm.RowSt = max(tm.RowSt, 0)
@@ -154,8 +154,8 @@ func (tm *Term) NextPage() error {
 func (tm *Term) PrevPage() error {
 	if tm.Tail {
 		mn := min(-(tm.MaxRows - tm.RowsPer), 0)
-		tm.RowFmEnd = min(tm.RowFmEnd-tm.RowsPer, 0)
-		tm.RowFmEnd = max(tm.RowFmEnd, mn)
+		tm.RowFromEnd = min(tm.RowFromEnd-tm.RowsPer, 0)
+		tm.RowFromEnd = max(tm.RowFromEnd, mn)
 	} else {
 		tm.RowSt = max(tm.RowSt-tm.RowsPer, 0)
 		tm.RowSt = min(tm.RowSt, tm.MaxRows-tm.RowsPer)
@@ -167,8 +167,8 @@ func (tm *Term) PrevPage() error {
 func (tm *Term) NextLine() error {
 	if tm.Tail {
 		mn := min(-(tm.MaxRows - tm.RowsPer), 0)
-		tm.RowFmEnd = min(tm.RowFmEnd+1, 0)
-		tm.RowFmEnd = max(tm.RowFmEnd, mn)
+		tm.RowFromEnd = min(tm.RowFromEnd+1, 0)
+		tm.RowFromEnd = max(tm.RowFromEnd, mn)
 	} else {
 		tm.RowSt = min(tm.RowSt+1, tm.MaxRows-tm.RowsPer)
 		tm.RowSt = max(tm.RowSt, 0)
@@ -180,8 +180,8 @@ func (tm *Term) NextLine() error {
 func (tm *Term) PrevLine() error {
 	if tm.Tail {
 		mn := min(-(tm.MaxRows - tm.RowsPer), 0)
-		tm.RowFmEnd = min(tm.RowFmEnd-1, 0)
-		tm.RowFmEnd = max(tm.RowFmEnd, mn)
+		tm.RowFromEnd = min(tm.RowFromEnd-1, 0)
+		tm.RowFromEnd = max(tm.RowFromEnd, mn)
 	} else {
 		tm.RowSt = max(tm.RowSt-1, 0)
 		tm.RowSt = min(tm.RowSt, tm.MaxRows-tm.RowsPer)
@@ -192,7 +192,7 @@ func (tm *Term) PrevLine() error {
 // Top moves to starting row = 0
 func (tm *Term) Top() error {
 	mn := min(-(tm.MaxRows - tm.RowsPer), 0)
-	tm.RowFmEnd = mn
+	tm.RowFromEnd = mn
 	tm.RowSt = 0
 	return tm.Draw()
 }
@@ -200,7 +200,7 @@ func (tm *Term) Top() error {
 // End moves row start to last position in longest file
 func (tm *Term) End() error {
 	mx := max(tm.MaxRows-tm.RowsPer, 0)
-	tm.RowFmEnd = 0
+	tm.RowFromEnd = 0
 	tm.RowSt = mx
 	return tm.Draw()
 }
@@ -293,7 +293,7 @@ func (tm *Term) TailCheck() bool {
 
 // DrawFile draws one file, starting at given y offset
 func (tm *Term) DrawFile(fl *File, sty int) {
-	tdo := (fl.Rows - tm.RowsPer) + tm.RowFmEnd // tail data offset for this file
+	tdo := (fl.Rows - tm.RowsPer) + tm.RowFromEnd // tail data offset for this file
 	tdo = max(0, tdo)
 	rst := min(tm.RowSt, fl.Rows-tm.RowsPer)
 	rst = max(0, rst)
