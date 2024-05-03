@@ -3,6 +3,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/emer/etail)](https://goreportcard.com/report/github.com/emer/etail)
 [![GoDoc](https://godoc.org/github.com/emer/emergent?status.svg)](https://godoc.org/github.com/emer/etail)
 
+**IMPORTANT UPDATE:** [Cogent Core](https://github.com/cogentcore/core) now has an improved version of etail in its [ttail](https://github.com/cogentcore/core/tree/main/tensor/cmd/ttail) package.  This version will not be further maintained or developed.  The v1 version is still needed for the v1 version of emergent.
+
 `etail` is a `tail` command for looking at .csv / .tsv log / data files in a terminal window.
 
 This is a Go rewrite of the `pdptail` command written in perl, dating back to the PDP++ era.
